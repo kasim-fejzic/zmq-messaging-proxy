@@ -1,0 +1,6 @@
+[requires]
+zmqpp/4.2.0
+
+[generators]
+CMakeDeps
+CMakeToolchain

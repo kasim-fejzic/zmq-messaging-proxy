@@ -26,54 +26,16 @@ void Proxy::start() {
     poller.poll();
 
     if (poller.events(subscriber)) {
-      zmqpp::message message;
-      subscriber.receive(message);
-
-      std::cout << "Proxy received a message from publisher [" << message.get(0)
-                << "]" << std::endl;
-
-      inForwarder.send(message);
+      forwardToWorker(subscriber, inForwarder);
     }
-
     if (poller.events(outForwarder)) {
-      zmqpp::message message;
-      outForwarder.receive(message);
-      std::string topic = message.get(0);
-      if (subscriptions_.find(topic) != subscriptions_.end()) {
-        std::string msgContent = message.get(1);
-        std::string suffix = message.get(2);
-        std::string count = message.get(3);
-        for (const auto& subscriber : subscriptions_[topic]) {
-          zmqpp::message msg;
-          msg.add(subscriber);
-          msg.add(topic + msgContent + suffix + count);
-
-          publisher.send(msg);
-        }
-      }
+      forwardToSubscribers(outForwarder, publisher);
     }
     if (poller.events(publisher)) {
-      zmqpp::message message;
-      publisher.receive(message);
-      std::string subscriberId = message.get(0);
-      std::string topic = message.get(1);
-
-      if (topic.empty()) {
-        unsubscribe(subscriberId, subscriber);
-      } else {
-        if (subscriptions_.find(topic) == subscriptions_.end()) {
-          workerThreads.push_back(std::async(std::launch::async, &Proxy::worker,
-                                             *this, std::ref(context),
-                                             std::ref(topic)));
-        }
-
-        subscribe(subscriberId, topic);
-        if (subscriptions_[topic].size() == 1) subscriber.subscribe(topic);
-      }
+      handleSubscriptions(publisher, subscriber, workerThreads, context);
     }
   }
 }
-void Proxy::stop() {}
 
 void Proxy::worker(zmqpp::context& context, std::string topic) {
   zmqpp::socket subscriber(context, zmqpp::socket_type::subscribe);
@@ -128,4 +90,57 @@ void Proxy::unsubscribe(const std::string& subscriberId,
   for (auto it = subscriptions_.begin(); it != subscriptions_.end(); ++it)
     if (unsubscribe(subscriberId, it->first) && it->second.empty())
       subscriber.unsubscribe(it->first);
+}
+
+void Proxy::forwardToWorker(zmqpp::socket& subscriber,
+                            zmqpp::socket& inForwarder) {
+  zmqpp::message message;
+  subscriber.receive(message);
+
+  std::cout << "Proxy received a message from publisher [" << message.get(0)
+            << "]" << std::endl;
+
+  inForwarder.send(message);
+}
+
+void Proxy::forwardToSubscribers(zmqpp::socket& outForwarder,
+                                 zmqpp::socket& publisher) {
+  zmqpp::message message;
+  outForwarder.receive(message);
+  std::string topic = message.get(0);
+  if (subscriptions_.find(topic) != subscriptions_.end()) {
+    std::string msgContent = message.get(1);
+    std::string suffix = message.get(2);
+    std::string count = message.get(3);
+    for (const auto& subscriber : subscriptions_[topic]) {
+      zmqpp::message msg;
+      msg.add(subscriber);
+      msg.add(topic + msgContent + suffix + count);
+
+      publisher.send(msg);
+    }
+  }
+}
+
+void Proxy::handleSubscriptions(zmqpp::socket& publisher,
+                                zmqpp::socket& subscriber,
+                                std::vector<std::future<void>>& workerThreads,
+                                zmqpp::context& context) {
+  zmqpp::message message;
+  publisher.receive(message);
+  std::string subscriberId = message.get(0);
+  std::string topic = message.get(1);
+
+  if (topic.empty()) {
+    unsubscribe(subscriberId, subscriber);
+  } else {
+    if (subscriptions_.find(topic) == subscriptions_.end()) {
+      workerThreads.push_back(std::async(std::launch::async, &Proxy::worker,
+                                         *this, std::ref(context),
+                                         std::ref(topic)));
+    }
+
+    subscribe(subscriberId, topic);
+    if (subscriptions_[topic].size() == 1) subscriber.subscribe(topic);
+  }
 }

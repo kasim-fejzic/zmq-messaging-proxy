@@ -11,7 +11,7 @@ To build the project you need to have conan and cmake installed.
 ```
 $ cd |publisher|proxy|subscriber|/
 $ mkdir build && cd build
-$ conan install .. --install-folder cmake-build-release --build=missing
+$ conan install .. -of cmake-build-release --build=missing
 $ cmake .. -DCMAKE_TOOLCHAIN_FILE=cmake-build-release/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 $ cmake --build .
 ```

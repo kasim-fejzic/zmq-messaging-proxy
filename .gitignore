@@ -1,10 +1,14 @@
 publisher/build/
 publisher/.cache/
 publisher/compile_commands.json
+publisher/CMakeUserPresets.json
+
 proxy/build/
 proxy/.cache/
 proxy/compile_commands.json
+proxy/CMakeUserPresets.json
+
 subscriber/build/
 subscriber/.cache/
 subscriber/compile_commands.json
-
+subscriber/CMakeUserPresets.json

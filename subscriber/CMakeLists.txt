@@ -10,5 +10,4 @@ find_package(spdlog REQUIRED)
 include_directories(include)
 
 add_executable(${PROJECT_NAME} src/subscriber.cpp src/main.cpp)
-target_link_libraries(${PROJECT_NAME} zmqpp::zmqpp asio::asio fmt::fmt
-                                                        spdlog::spdlog)
+target_link_libraries(${PROJECT_NAME} zmqpp::zmqpp asio::asio spdlog::spdlog)

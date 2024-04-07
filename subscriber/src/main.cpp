@@ -1,24 +1,23 @@
-#include "subscriber.hpp"
-#include <iostream>
-#include <future>
+#include <subscriber.hpp>
+#include <thread>
 
 std::vector<std::string> extractTopics(std::string);
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   if (argc < 2)
-    throw std::invalid_argument(
-        "Please provide a valid number of arguments! "
-        "[ex. ./subscriber topic1,topic2 topic2,topic4,topic7 ...]");
+    throw std::invalid_argument("Please provide a valid number of arguments! "
+                                "[ex. ./subscriber topic1,topic2,topic3...]");
 
-  std::vector<Subscriber> subscribers;
-  std::vector<std::future<void>> futs;
-  for (int i = 1; i < argc; ++i)
-    subscribers.push_back(Subscriber("Subscriber" + std::to_string(i),
-                                     extractTopics(std::string(argv[i]))));
+  auto subscriber = Subscriber("127.0.0.1", 8081, std::string("Subscriber"));
+  subscriber.start();
 
-  for (auto& sub : subscribers)
-    futs.push_back(
-        std::async(std::launch::async, &Subscriber::subscribe, &sub));
+  std::vector<std::string> topics = extractTopics(argv[1]);
+  for (const auto &topic : topics)
+    subscriber.subscribe(topic);
+
+  while (1) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  }
 
   return 0;
 }

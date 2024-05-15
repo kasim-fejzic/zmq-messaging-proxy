@@ -46,8 +46,10 @@ void Proxy::start() {
   m_running = true;
   // LOG CONNECT
 
-  p_runner = std::make_unique<std::future<void>>(std::async(
-      std::launch::async, &Proxy::listenForMessagesOnPublisher, this));
+  m_runners.emplace_back(std::make_unique<std::future<void>>(std::async(
+      std::launch::async, &Proxy::listenForMessagesOnPublisher, this)));
+  m_runners.emplace_back(std::make_unique<std::future<void>>(std::async(
+      std::launch::async, &Proxy::listenForMessagesOnSubscriber, this)));
 }
 
 //----------------------------------------------------------------------//
@@ -67,6 +69,22 @@ void Proxy::listenForMessagesOnPublisher() {
       message >> subscription;
       subscribe(subscription); // TODO check to start as async?
       // Log received message
+    }
+  }
+}
+
+//----------------------------------------------------------------------//
+void Proxy::listenForMessagesOnSubscriber() {
+  // Log starting listener
+
+  while (m_running) {
+    if (m_subsribersPoller.poll()) {
+      for (const auto &[topic, socket] : m_subscribers) {
+        zmqpp::message message;
+        socket->receive(message);
+        // forwardToSubs
+        // Log received message
+      }
     }
   }
 }

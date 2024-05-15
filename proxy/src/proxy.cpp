@@ -80,10 +80,12 @@ void Proxy::listenForMessagesOnSubscriber() {
   while (m_running) {
     if (m_subsribersPoller.poll()) {
       for (const auto &[topic, socket] : m_subscribers) {
-        zmqpp::message message;
-        socket->receive(message);
-        // forwardToSubs
-        // Log received message
+        if (m_subsribersPoller.has_input(*socket)) {
+          zmqpp::message message;
+          socket->receive(message);
+          // forwardToSubs
+          // Log received message
+        }
       }
     }
   }
